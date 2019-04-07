@@ -32,7 +32,8 @@ export default class Pulse extends Component {
         numPulses: PropTypes.number,
         pulseStyle: PropTypes.object,
         speed: PropTypes.number,
-        style: PropTypes.object
+        style: PropTypes.object,
+        kernelContent: PropTypes.element
     };
 
     static defaultProps = {
@@ -50,7 +51,8 @@ export default class Pulse extends Component {
             flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center'
-        }
+        },
+        kernelContent:null
     }
 
     constructor(props){
@@ -66,7 +68,8 @@ export default class Pulse extends Component {
             pulseStyle: this.props.pulseStyle,
             speed: this.props.speed,
             started: false,
-            style: this.props.style
+            style: this.props.style,
+            kernelContent: this.props.kernelContent
         };
     }
 
@@ -138,9 +141,9 @@ export default class Pulse extends Component {
     }
 
     render(){
-        const {color, image, maxDiameter, pulses, pulseStyle, started, style} = this.state;
-        const containerStyle = [styles.container, style];
-        const pulseWrapperStyle = {width: maxDiameter, height: maxDiameter};
+        const {color, image, maxDiameter, pulses, pulseStyle, started, style, kernelContent} = this.state;
+        const containerStyle = [style];
+        const pulseWrapperStyle = {width: maxDiameter, height: maxDiameter, justifyContent:'center', alignItems:'center'};
 
         return (
             <View style={containerStyle}>
@@ -164,12 +167,7 @@ export default class Pulse extends Component {
                                 ]}
                             />
                         )}
-                        {image &&
-                            <Image
-                                style={image.style}
-                                source={image.source}
-                            />
-                        }
+                        {kernelContent}
                     </View>
                 }
             </View>
