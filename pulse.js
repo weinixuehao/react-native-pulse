@@ -1,12 +1,13 @@
 import React, {
-  Component
+    Component
 } from 'react';
 import PropTypes from 'prop-types';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
+    View,
+    Text,
+    Image,
+    StyleSheet,
+    AppState
 } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -52,12 +53,13 @@ export default class Pulse extends Component {
             justifyContent: 'center',
             alignItems: 'center'
         },
-        kernelContent:null
+        kernelContent: null
     }
 
-    constructor(props){
+    pulseTimer = 0
+    createPulseTimer = 0
+    constructor(props) {
         super(props);
-
         this.state = {
             color: this.props.color,
             duration: this.props.duration,
@@ -69,61 +71,103 @@ export default class Pulse extends Component {
             speed: this.props.speed,
             started: false,
             style: this.props.style,
-            kernelContent: this.props.kernelContent
+            kernelContent: this.props.kernelContent,
+            appState: AppState.currentState,
         };
     }
 
-    mounted = true;
+    componentDidMount() {
+        AppState.addEventListener('change', this._handleAppStateChange);
+        this.start()
+        this.didBlurSubscription = this.props.navigation.addListener(
+            'didBlur',
+            payload => {
+                this.stop()
+            }
+        );
+        this.didFocusSubscription = this.props.navigation.addListener(
+            'didFocus',
+            payload => {
+                this.start()
+            }
+        );
+    }
 
-    componentDidMount(){
-        const {numPulses, duration, speed} = this.state;
+    componentWillUnmount() {
+        this.stop()
+        AppState.removeEventListener('change', this._handleAppStateChange);
+        this.didBlurSubscription.remove()
+        this.didFocusSubscription.remove()
+    }
 
-        this.setState({started: true});
+    start = () => {
+        if (this.started) return
+        this.started = true;
+        const { numPulses, duration, speed } = this.state;
+
+        this.setState({ started: true });
 
         let a = 0;
-        while(a < numPulses){
-            this.createPulseTimer = setTimeout(()=>{
-                this.createPulse(a);
-            }, a * duration);
-
-            a++;
+        if (this.state.pulses.length < 1) {
+            while (a < numPulses) {
+                this.createPulseTimer = setTimeout(() => {
+                    this.createPulse(a);
+                }, a * duration);
+    
+                a++;
+            }
         }
 
-        this.timer = setInterval(() => {
+        this.pulseTimer = setInterval(() => {
             this.updatePulse();
         }, speed);
     }
 
-    componentWillUnmount(){
-        this.mounted = false;
+    stop = () => {
+        if (!this.started) return
+        this.started = false;
+        clearInterval(this.pulseTimer);
+        this.pulseTimer = undefined
         clearTimeout(this.createPulseTimer);
-        clearInterval(this.timer);
+        this.createPulseTimer = undefined
     }
 
+    _handleAppStateChange = (nextAppState) => {
+        if (
+            this.state.appState.match(/inactive|background/) &&
+            nextAppState === 'active'
+        ) {
+            this.start()
+        } else {
+            this.stop()
+        }
+        this.setState({ appState: nextAppState });
+    };
+
     createPulse = (pKey) => {
-        if (this.mounted) {
+        if (this.started) {
             let pulses = this.state.pulses;
 
             let pulse = {
                 pulseKey: pulses.length + 1,
                 diameter: this.props.initialDiameter,
                 opacity: .5,
-                centerOffset: ( this.state.maxDiameter - this.props.initialDiameter ) / 2
+                centerOffset: (this.state.maxDiameter - this.props.initialDiameter) / 2
             };
 
             pulses.push(pulse);
 
-            this.setState({pulses});
+            this.setState({ pulses });
         }
     }
 
     updatePulse = () => {
-        if (this.mounted) {
+        if (this.started) {
             const pulses = this.state.pulses.map((p, i) => {
                 let maxDiameter = this.state.maxDiameter;
                 let newDiameter = (p.diameter > maxDiameter ? 0 : p.diameter + 2);
-                let centerOffset = ( maxDiameter - newDiameter ) / 2;
-                let opacity = Math.abs( ( newDiameter / this.state.maxDiameter ) - 1 );
+                let centerOffset = (maxDiameter - newDiameter) / 2;
+                let opacity = Math.abs((newDiameter / this.state.maxDiameter) - 1);
 
                 let pulse = {
                     pulseKey: i + 1,
@@ -136,14 +180,14 @@ export default class Pulse extends Component {
 
             });
 
-            this.setState({pulses});
+            this.setState({ pulses });
         }
     }
 
-    render(){
-        const {color, image, maxDiameter, pulses, pulseStyle, started, style, kernelContent} = this.state;
+    render() {
+        const { color, image, maxDiameter, pulses, pulseStyle, started, style, kernelContent } = this.state;
         const containerStyle = [style];
-        const pulseWrapperStyle = {width: maxDiameter, height: maxDiameter, justifyContent:'center', alignItems:'center'};
+        const pulseWrapperStyle = { width: maxDiameter, height: maxDiameter, justifyContent: 'center', alignItems: 'center' };
 
         return (
             <View style={containerStyle}>
